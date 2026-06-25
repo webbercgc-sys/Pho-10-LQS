@@ -71,7 +71,7 @@ function Index() {
               />
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:opacity-90"
+                className="btn-press btn-glow flex-1 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground"
               >
                 Open Menu →
               </button>
@@ -96,7 +96,7 @@ function Index() {
             </div>
             <Link
               to="/kitchen"
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-3 font-semibold text-background transition hover:opacity-90"
+              className="btn-press btn-glow mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-3 font-semibold text-background"
             >
               <UtensilsCrossed className="h-4 w-4" />
               Open Kitchen Dashboard

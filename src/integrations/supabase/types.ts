@@ -117,28 +117,64 @@ export type Database = {
       }
       tickets: {
         Row: {
+          cancelled_at: string | null
+          closed_at: string | null
           created_at: string
           id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
           queue_number: number
           status: Database["public"]["Enums"]["ticket_status"]
           table_number: number
           updated_at: string
         }
         Insert: {
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           id?: string
+          paid_at?: string | null
+          payment_requested_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           queue_number?: number
           status?: Database["public"]["Enums"]["ticket_status"]
           table_number: number
           updated_at?: string
         }
         Update: {
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
           id?: string
+          paid_at?: string | null
+          payment_requested_at?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           queue_number?: number
           status?: Database["public"]["Enums"]["ticket_status"]
           table_number?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -148,12 +184,115 @@ export type Database = {
     }
     Functions: {
       acknowledge_bell: { Args: { p_alert_id: string }; Returns: undefined }
+      cancel_ticket: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          cancelled_at: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          queue_number: number
+          status: Database["public"]["Enums"]["ticket_status"]
+          table_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_dish_batch: { Args: { p_dish_id: string }; Returns: number }
+      confirm_payment: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          cancelled_at: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          queue_number: number
+          status: Database["public"]["Enums"]["ticket_status"]
+          table_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      delete_ticket_item: { Args: { p_item_id: string }; Returns: undefined }
+      grant_self_kitchen: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_kitchen_staff: { Args: { _user_id: string }; Returns: boolean }
       place_order: {
         Args: { p_items: Json; p_table_number: number }
         Returns: {
+          cancelled_at: string | null
+          closed_at: string | null
           created_at: string
           id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          queue_number: number
+          status: Database["public"]["Enums"]["ticket_status"]
+          table_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reopen_ticket: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          cancelled_at: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          queue_number: number
+          status: Database["public"]["Enums"]["ticket_status"]
+          table_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_payment: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          cancelled_at: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
           queue_number: number
           status: Database["public"]["Enums"]["ticket_status"]
           table_number: number
@@ -199,9 +338,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_ticket_item_quantity: {
+        Args: { p_item_id: string; p_quantity: number }
+        Returns: {
+          completed_at: string | null
+          dish_id: string
+          id: string
+          quantity: number
+          status: Database["public"]["Enums"]["item_status"]
+          ticket_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ticket_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      app_role: "admin" | "kitchen"
       item_status: "pending" | "done"
+      payment_status: "none" | "requested" | "paid"
       ticket_status: "waiting" | "in_progress" | "served"
     }
     CompositeTypes: {
@@ -330,7 +488,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "kitchen"],
       item_status: ["pending", "done"],
+      payment_status: ["none", "requested", "paid"],
       ticket_status: ["waiting", "in_progress", "served"],
     },
   },

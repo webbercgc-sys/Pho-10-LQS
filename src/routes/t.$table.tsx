@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Bell, Minus, Plus, ShoppingBag, ArrowLeft, Check, ChefHat, CircleDot } from "lucide-react";
+import { Bell, Minus, Plus, ShoppingBag, ArrowLeft, Check, ChefHat, CircleDot, Wallet, PartyPopper } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatVnd } from "@/lib/format";
 import { toast } from "sonner";
@@ -29,7 +29,9 @@ type Ticket = {
   queue_number: number;
   table_number: number;
   status: "waiting" | "in_progress" | "served";
+  payment_status: "none" | "requested" | "paid";
   created_at: string;
+  cancelled_at: string | null;
 };
 type TicketItem = {
   id: string;
@@ -195,7 +197,7 @@ function MenuView({ table, onPlaced }: { table: string; onPlaced: (id: string) =
             <button
               disabled={placeOrder.isPending}
               onClick={() => placeOrder.mutate()}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground shadow-lg transition hover:opacity-95 disabled:opacity-60"
+              className="btn-press btn-glow flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-60"
             >
               <ShoppingBag className="h-4 w-4" />
               {placeOrder.isPending ? "Placing…" : "Place Order"}
@@ -212,7 +214,7 @@ function QtyStepper({ q, onChange }: { q: number; onChange: (q: number) => void 
     return (
       <button
         onClick={() => onChange(1)}
-        className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90"
+        className="btn-press grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground"
         aria-label="Add"
       >
         <Plus className="h-5 w-5" />
@@ -221,11 +223,11 @@ function QtyStepper({ q, onChange }: { q: number; onChange: (q: number) => void 
   }
   return (
     <div className="flex items-center gap-2 rounded-full bg-muted p-1">
-      <button onClick={() => onChange(q - 1)} className="grid h-8 w-8 place-items-center rounded-full bg-card" aria-label="Remove">
+      <button onClick={() => onChange(q - 1)} className="btn-press grid h-8 w-8 place-items-center rounded-full bg-card" aria-label="Remove">
         <Minus className="h-4 w-4" />
       </button>
       <span className="w-6 text-center font-bold">{q}</span>
-      <button onClick={() => onChange(q + 1)} className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground" aria-label="Add">
+      <button onClick={() => onChange(q + 1)} className="btn-press grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground" aria-label="Add">
         <Plus className="h-4 w-4" />
       </button>
     </div>
@@ -244,6 +246,7 @@ function TicketView({
   onReset: () => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -309,6 +312,18 @@ function TicketView({
     },
   });
 
+  const requestPayment = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("request_payment", { p_ticket_id: ticketId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Payment requested — staff will confirm shortly.");
+      qc.invalidateQueries({ queryKey: ["ticket", ticketId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (isLoading || !data) {
     return (
       <div className="min-h-screen" style={{ background: "var(--gradient-warm)" }}>
@@ -326,7 +341,11 @@ function TicketView({
 
   const elapsed = now - new Date(ticket.created_at).getTime();
   const pct = Math.min(100, Math.round((elapsed / BELL_WAIT_MS) * 100));
-  const canRing = elapsed >= BELL_WAIT_MS && !bell;
+  const isPaid = ticket.payment_status === "paid";
+  const isClosed = isPaid || !!ticket.cancelled_at;
+  const isServed = ticket.status === "served";
+  const hideBell = isClosed || isServed;
+  const canRing = elapsed >= BELL_WAIT_MS && !bell && !hideBell;
   const remainingMs = Math.max(0, BELL_WAIT_MS - elapsed);
   const mm = Math.floor(remainingMs / 60000);
   const ss = Math.floor((remainingMs % 60000) / 1000);
@@ -336,6 +355,34 @@ function TicketView({
     in_progress: "Cooking now",
     served: "Served — enjoy!",
   }[ticket.status];
+
+  // Thank you screen — paid → auto return home
+  if (isPaid) {
+    return <ThankYouView table={table} onDone={() => {
+      onReset();
+      navigate({ to: "/" });
+    }} />;
+  }
+
+  // Cancelled by staff
+  if (ticket.cancelled_at) {
+    return (
+      <div className="min-h-screen pb-12" style={{ background: "var(--gradient-warm)" }}>
+        <Header table={table} />
+        <main className="mx-auto max-w-2xl px-4 py-10 text-center">
+          <div className="rounded-3xl bg-card p-8 anim-pop" style={{ boxShadow: "var(--shadow-card)" }}>
+            <h2 className="text-2xl font-black">Order cancelled</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Staff cancelled this ticket. Please start a new order.</p>
+            <button onClick={onReset} className="btn-press btn-glow mt-6 rounded-xl bg-primary px-6 py-3 font-bold text-primary-foreground">
+              Start new order
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const paymentRequested = ticket.payment_status === "requested";
 
   return (
     <div className="min-h-screen pb-12" style={{ background: "var(--gradient-warm)" }}>
@@ -390,7 +437,33 @@ function TicketView({
           </div>
         </div>
 
-        {/* Bell */}
+        {/* Payment */}
+        <div className="rounded-2xl bg-card p-5 anim-pop" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-primary-foreground">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="font-bold">Ready to pay?</div>
+              <div className="text-sm text-muted-foreground">
+                {paymentRequested
+                  ? "Payment requested — please wait while staff confirms."
+                  : "Tap to ask staff for the bill. They'll come to confirm payment."}
+              </div>
+            </div>
+          </div>
+          <button
+            disabled={paymentRequested || requestPayment.isPending}
+            onClick={() => requestPayment.mutate()}
+            className="btn-press btn-glow mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Wallet className="h-4 w-4" />
+            {paymentRequested ? "Awaiting confirmation…" : "Request Payment"}
+          </button>
+        </div>
+
+        {/* Bell — hidden once served or paid */}
+        {!hideBell && (
         <div className="rounded-2xl bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-secondary-foreground">
@@ -417,20 +490,12 @@ function TicketView({
           <button
             disabled={!canRing || ringBell.isPending}
             onClick={() => ringBell.mutate()}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-press btn-glow mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Bell className="h-4 w-4" />
             Ring Bell
           </button>
         </div>
-
-        {ticket.status === "served" && (
-          <button
-            onClick={onReset}
-            className="w-full rounded-xl border border-border bg-card px-4 py-3 font-semibold text-foreground transition hover:bg-muted"
-          >
-            Start a new order
-          </button>
         )}
 
         <Link to="/kitchen" className="block text-center text-xs text-muted-foreground hover:underline">
@@ -442,13 +507,39 @@ function TicketView({
   );
 }
 
+function ThankYouView({ table, onDone }: { table: string; onDone: () => void }) {
+  const [count, setCount] = useState(6);
+  useEffect(() => {
+    if (count <= 0) { onDone(); return; }
+    const t = setTimeout(() => setCount((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [count, onDone]);
+  return (
+    <div className="min-h-screen grid place-items-center px-4" style={{ background: "var(--gradient-warm)" }}>
+      <div className="anim-bounce-in max-w-md text-center rounded-3xl bg-card p-10" style={{ boxShadow: "var(--shadow-bowl)" }}>
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full" style={{ background: "var(--gradient-hero)" }}>
+          <PartyPopper className="h-10 w-10 text-primary-foreground" />
+        </div>
+        <h1 className="mt-6 text-3xl font-black">Cảm ơn quý khách!</h1>
+        <p className="mt-2 text-muted-foreground">
+          Thanh toán đã được xác nhận tại Table {table}. Hẹn gặp lại tại Phở 10!
+        </p>
+        <button onClick={onDone} className="btn-press btn-glow mt-6 w-full rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground">
+          Back to home now
+        </button>
+        <p className="mt-3 text-xs text-muted-foreground">Returning in {count}s…</p>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────── Shared header ─────────────────────────
 
 function Header({ table }: { table: string }) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur">
       <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
-        <Link to="/" className="grid h-9 w-9 place-items-center rounded-lg bg-muted text-foreground transition hover:bg-border">
+        <Link to="/" className="btn-press grid h-9 w-9 place-items-center rounded-lg bg-muted text-foreground hover:bg-border">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1">
