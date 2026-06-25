@@ -230,6 +230,7 @@ export type Database = {
         }
       }
       delete_ticket_item: { Args: { p_item_id: string }; Returns: undefined }
+      grant_self_kitchen: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
