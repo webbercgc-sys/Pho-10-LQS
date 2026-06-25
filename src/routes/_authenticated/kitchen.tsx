@@ -1,3 +1,4 @@
+import React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -580,6 +581,3 @@ function TicketStatus({ t }: { t: Ticket }) {
 function Badge({ cls, children }: { cls: string; children: React.ReactNode }) {
   return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`}>{children}</span>;
 }
-
-// React needed for Fragment
-import React from "react";
