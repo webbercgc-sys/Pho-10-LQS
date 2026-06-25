@@ -151,3 +151,39 @@
     color: var(--color-foreground);
   }
 }
+
+/* ───── Button & motion utilities ───── */
+@layer utilities {
+  .btn-press {
+    transition: transform 120ms ease, box-shadow 200ms ease, opacity 150ms ease, background-color 150ms ease;
+  }
+  .btn-press:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-press:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+  .btn-glow {
+    position: relative;
+    box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--primary) 55%, transparent);
+  }
+  .btn-glow:hover:not(:disabled) {
+    box-shadow: 0 10px 26px -10px color-mix(in oklab, var(--primary) 70%, transparent);
+  }
+
+  .anim-pop { animation: anim-pop 240ms ease-out both; }
+  @keyframes anim-pop {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+
+  .anim-fade { animation: anim-fade 300ms ease-out both; }
+  @keyframes anim-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .anim-bounce-in { animation: anim-bounce 500ms cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes anim-bounce {
+    0%   { opacity: 0; transform: scale(0.6); }
+    60%  { opacity: 1; transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+}
