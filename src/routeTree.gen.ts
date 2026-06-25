@@ -9,15 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TTableRouteImport } from './routes/t.$table'
 
-const KitchenRoute = KitchenRouteImport.update({
-  id: '/kitchen',
-  path: '/kitchen',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,43 +25,32 @@ const TTableRoute = TTableRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/kitchen': typeof KitchenRoute
   '/t/$table': typeof TTableRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/kitchen': typeof KitchenRoute
   '/t/$table': typeof TTableRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/kitchen': typeof KitchenRoute
   '/t/$table': typeof TTableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kitchen' | '/t/$table'
+  fullPaths: '/' | '/t/$table'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kitchen' | '/t/$table'
-  id: '__root__' | '/' | '/kitchen' | '/t/$table'
+  to: '/' | '/t/$table'
+  id: '__root__' | '/' | '/t/$table'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  KitchenRoute: typeof KitchenRoute
   TTableRoute: typeof TTableRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/kitchen': {
-      id: '/kitchen'
-      path: '/kitchen'
-      fullPath: '/kitchen'
-      preLoaderRoute: typeof KitchenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -87,7 +70,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  KitchenRoute: KitchenRoute,
   TTableRoute: TTableRoute,
 }
 export const routeTree = rootRouteImport
